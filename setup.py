@@ -68,38 +68,31 @@ if sys.platform == "darwin":
 else:
     search_include_dirs.extend(['/usr/include','/usr/local/include','/opt/local/include','/usr/pkg/include/ev'])
 
-version=platform.python_version_tuple()
+version = platform.python_version_tuple()
 if int(version[0])==2 and int(version[1])>=4:
     print "Find python 2.4 or higher"
 else:
     print "Fapws has been developped with python 2.4 or higher (not yet python 3.X). Instead we found python %s.%s" % (version[0], version[1])
     sys.exit(1)
 
+def assert_resource_and_append_if_found(filename, search_paths, env_name, res_list):
+    res = find_file(filename, search_paths)
+    if res == False:
+        print "Warning: We don't find %s which is a mandatory file to compile Fapws" % filename
+        print "Directory searched: %s" % '\t'.join(search_paths)
+        print "Please install the sources of libev, or provide the path by setting the shell environmental variable %s "% env_name
+        #sys.exit(1)
+    res_list.append(res)
 
-res=find_file('ev.h',search_include_dirs)
-if res==False:
-    print "We don't find 'ev.h' which is a mandatory file to compile Fapws"
-    print "Please install the sources of libev, or provide the path by setting the shell environmental variable C_INCLUDE_PATH"
-    sys.exit(1)
-include_dirs.append(res)
-
-res=find_file('Python.h',[distutils.sysconfig.get_python_inc()])
-if res==False:
-    print "We don't find 'Python.h' which is a mandatory file to compile Fapws"
-    print "Please install the sources of python, or provide the path by setting the shell environmental variable C_INCLUDE_PATH"
-    sys.exit(1)
-include_dirs.append(res)
-res=find_file('libev.a',search_library_dirs)
-if res==False:
-    print "We don't find 'libev.so' which is a mandatory file to run Fapws"
-    print "Please install libev, or provide the path by setting the shell environmental variable LD_LIBRARY_PATH"
-    sys.exit(1)
-library_dirs.append(res)
-if sys.platform == "darwin":
-    extra_link_args=['-Wl']
+assert_resource_and_append_if_found('ev.h', search_include_dirs, 'C_INCLUDE_PATH', include_dirs)
+assert_resource_and_append_if_found('Python.h', search_include_dirs, 'C_INCLUDE_PATH', [distutils.sysconfig.get_python_inc()])
+if sys.platform == 'darwin':
+    assert_resource_and_append_if_found('libev.dylib', search_include_dirs, 'DYLD_LIBRARY_PATH', library_dirs)
 else:
-    extra_link_args=['-Wl,-R%s' % res]
-
+    assert_resource_and_append_if_found('libev.a', search_include_dirs, 'LD_LIBRARY_PATH', library_dirs)
+    assert_resource_and_append_if_found('libev.so', search_include_dirs, 'LD_LIBRARY_PATH', library_dirs)
+               
+extra_link_args=['-Wl']
 
 setup(name='fapws3',
       version="0.10",
@@ -126,9 +119,9 @@ classifiers=['Development Status :: 4 - Beta','Environment :: Web Environment','
                   depends=['fapws/extra.h','fapws/wsgi.h','fapws/mainloop.h','fapws/common.h'],
                   sources=['fapws/extra.c', 'fapws/wsgi.c','fapws/mainloop.c','fapws/_evwsgi.c'],
                   include_dirs=include_dirs,
-                  library_dirs=library_dirs, 
                   libraries=['ev'],
-                  extra_link_args=extra_link_args, #comment this line if you prefer to play with LD_LIBRARY_PATH
+                  #library_dirs=library_dirs, 
+                  #extra_link_args=extra_link_args, #comment this line if you prefer to play with LD_LIBRARY_PATH
                   #extra_compile_args=["-ggdb"],
                   #define_macros=[("DEBUG", "1")],
                   )
